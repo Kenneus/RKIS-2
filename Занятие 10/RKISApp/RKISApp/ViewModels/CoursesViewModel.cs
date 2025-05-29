@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RKISApp.Models;
-using System.Windows.Input;
+using RKISApp.Services;
 
 namespace RKISApp.ViewModels
 {
@@ -20,32 +22,44 @@ namespace RKISApp.ViewModels
         [ObservableProperty]
         private Course? _editingCourse;
 
-        public CoursesViewModel()
+        private readonly DatabaseService _dbService;
+
+        public ICommand CurrentAddSaveCourseCommand => EditingCourse is null ? AddCourseCommand : SaveCourseCommand;
+
+        public CoursesViewModel(ObservableCollection<Course> courses, DatabaseService dbService)
         {
-            _courses = new ObservableCollection<Course>
-            {
-                new Course { Name = "Математика", Description = "Основы математики" },
-                new Course { Name = "Физика", Description = "Основы физики" }
-            };
-            _newCourseName = string.Empty;
-            _newCourseDescription = string.Empty;
+            _dbService = dbService;
+            Courses = courses ?? _dbService.GetCourses(); // Используем свойство вместо поля
+            NewCourseName = string.Empty; // Используем свойство
+            NewCourseDescription = string.Empty; // Используем свойство
         }
 
         [RelayCommand]
         private void AddCourse()
         {
-            if (!string.IsNullOrWhiteSpace(NewCourseName) && !string.IsNullOrWhiteSpace(NewCourseDescription))
+            if (!string.IsNullOrWhiteSpace(NewCourseName)) // Используем свойство
             {
-                Courses.Add(new Course { Name = NewCourseName, Description = NewCourseDescription });
-                NewCourseName = string.Empty;
-                NewCourseDescription = string.Empty;
+                var course = new Course
+                {
+                    Id = Courses.Any() ? Courses.Max(c => c.Id) + 1 : 1, // Используем свойство
+                    Name = NewCourseName, // Используем свойство
+                    Description = NewCourseDescription // Используем свойство
+                };
+                Courses.Add(course); // Используем свойство
+                _dbService.SaveCourse(course);
+                NewCourseName = string.Empty; // Используем свойство
+                NewCourseDescription = string.Empty; // Используем свойство
             }
         }
 
         [RelayCommand]
         private void RemoveCourse(Course course)
         {
-            Courses.Remove(course);
+            if (course != null)
+            {
+                Courses.Remove(course); // Используем свойство
+                _dbService.DeleteCourse(course.Id);
+            }
         }
 
         [RelayCommand]
@@ -57,9 +71,9 @@ namespace RKISApp.ViewModels
                 {
                     SaveCourseChanges(EditingCourse);
                 }
-                EditingCourse = course;
-                NewCourseName = course.Name ?? string.Empty;
-                NewCourseDescription = course.Description ?? string.Empty;
+                EditingCourse = course; // Используем свойство
+                NewCourseName = course.Name ?? string.Empty; // Используем свойство
+                NewCourseDescription = course.Description ?? string.Empty; // Используем свойство
             }
         }
 
@@ -68,12 +82,12 @@ namespace RKISApp.ViewModels
         {
             if (EditingCourse != null)
             {
-                EditingCourse.Name = NewCourseName;
-                EditingCourse.Description = NewCourseDescription;
-                EditingCourse.IsEditing = false;
-                EditingCourse = null;
-                NewCourseName = string.Empty;
-                NewCourseDescription = string.Empty;
+                SaveCourseChanges(EditingCourse);
+                _dbService.SaveCourse(EditingCourse);
+                EditingCourse.IsEditing = false; // Используем свойство
+                EditingCourse = null; // Используем свойство
+                NewCourseName = string.Empty; // Используем свойство
+                NewCourseDescription = string.Empty; // Используем свойство
             }
         }
 
@@ -82,20 +96,30 @@ namespace RKISApp.ViewModels
         {
             if (EditingCourse != null)
             {
-                EditingCourse.IsEditing = false;
-                EditingCourse = null;
-                NewCourseName = string.Empty;
-                NewCourseDescription = string.Empty;
+                EditingCourse.IsEditing = false; // Используем свойство
+                EditingCourse = null; // Используем свойство
+                NewCourseName = string.Empty; // Используем свойство
+                NewCourseDescription = string.Empty; // Используем свойство
             }
         }
 
-        public ICommand CurrentAddSaveCourseCommand => EditingCourse == null ? AddCourseCommand : SaveCourseCommand;
-
         private void SaveCourseChanges(Course course)
         {
-            course.Name = NewCourseName;
-            course.Description = NewCourseDescription;
-            course.IsEditing = false;
+            if (course != null)
+            {
+                int index = Courses.IndexOf(course); // Используем свойство
+                if (index >= 0)
+                {
+                    Courses[index] = new Course
+                    {
+                        Id = course.Id,
+                        Name = NewCourseName ?? string.Empty, // Используем свойство
+                        Description = NewCourseDescription ?? string.Empty, // Используем свойство
+                        IsEditing = false,
+                        Students = course.Students
+                    };
+                }
+            }
         }
     }
 }

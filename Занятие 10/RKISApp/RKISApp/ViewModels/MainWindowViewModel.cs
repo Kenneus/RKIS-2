@@ -1,8 +1,10 @@
 ﻿using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RKISApp.Models;
+using RKISApp.Services;
 using RKISApp.ViewModels;
 
 namespace RKISApp.ViewModels
@@ -15,10 +17,21 @@ namespace RKISApp.ViewModels
         public RKISViewModel RKISViewModel { get; }
         public CoursesViewModel CoursesViewModel { get; }
 
+        private readonly DatabaseService _dbService;
+
         public MainWindowViewModel()
         {
-            CoursesViewModel = new CoursesViewModel();
-            RKISViewModel = new RKISViewModel(CoursesViewModel.Courses);
+            _dbService = new DatabaseService();
+
+            // Создаём папку Images, если она не существует
+            string imagesPath = Path.Combine(Directory.GetCurrentDirectory(), "Images");
+            if (!Directory.Exists(imagesPath))
+            {
+                Directory.CreateDirectory(imagesPath);
+            }
+
+            CoursesViewModel = new CoursesViewModel(_dbService.GetCourses(), _dbService);
+            RKISViewModel = new RKISViewModel(_dbService.GetCourses(), _dbService);
             CurrentViewModel = RKISViewModel;
 
             // Синхронизация изменений в курсах
@@ -27,17 +40,19 @@ namespace RKISApp.ViewModels
                 var newAvailableCourses = new ObservableCollection<Course>(CoursesViewModel.Courses);
                 RKISViewModel.AvailableCourses = newAvailableCourses;
 
-                // Обновляем курсы студентов, сохраняя их оригинальные данные
                 foreach (var student in RKISViewModel.Students)
                 {
                     var updatedCourses = new ObservableCollection<Course>();
-                    foreach (var course in student.Courses)
+                    if (student != null && student.Courses != null) // Проверка на null
                     {
-                        // Если курс всё ещё существует в AvailableCourses, используем его
-                        var matchingCourse = newAvailableCourses.FirstOrDefault(c => c.Name == course.Name && c.Description == course.Description);
-                        updatedCourses.Add(matchingCourse ?? course); // Сохраняем оригинальный курс, если он удалён
+                        foreach (var course in student.Courses)
+                        {
+                            var matchingCourse = newAvailableCourses.FirstOrDefault(c => c.Name == course.Name && c.Description == course.Description);
+                            updatedCourses.Add(matchingCourse ?? course);
+                        }
                     }
-                    student.Courses = updatedCourses;
+                    student.Courses = updatedCourses.Any() ? updatedCourses : (student.Courses ?? new ObservableCollection<Course>());
+                    _dbService.SaveStudent(student);
                 }
             };
         }
