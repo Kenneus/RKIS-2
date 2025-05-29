@@ -1,8 +1,9 @@
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RKISApp.Models;
-using System.Windows.Input;
 
 namespace RKISApp.ViewModels
 {
@@ -25,13 +26,16 @@ namespace RKISApp.ViewModels
 
         private int _nextId = 1;
 
+        // Свойство для переключения между командами "Добавить" и "Сохранить"
+        public ICommand CurrentAddSaveCommand => EditingStudent is null ? AddStudentCommand : SaveStudentCommand;
+
         public RKISViewModel(ObservableCollection<Course> courses)
         {
             _availableCourses = courses ?? new ObservableCollection<Course>();
             _students = new ObservableCollection<Student>
             {
-                new Student { Id = _nextId++, Name = "Алексей", Courses = new ObservableCollection<Course> { new Course { Name = "Математика", Description = "Основы математики" } } },
-                new Student { Id = _nextId++, Name = "Мария", Courses = new ObservableCollection<Course> { new Course { Name = "Физика", Description = "Основы физики" } } }
+                new Student { Id = _nextId++, Name = "Алексей", Courses = new() { new Course { Name = "Математика", Description = "Основы математики" } } },
+                new Student { Id = _nextId++, Name = "Мария", Courses = new() { new Course { Name = "Физика", Description = "Основы физики" } } }
             };
             _selectedCourses = new ObservableCollection<Course>();
             _newStudentName = string.Empty;
@@ -40,24 +44,27 @@ namespace RKISApp.ViewModels
         [RelayCommand]
         private void AddStudent()
         {
-            if (!string.IsNullOrWhiteSpace(NewStudentName))
+            if (!string.IsNullOrWhiteSpace(NewStudentName) && !Students.Any(s => s.Name == NewStudentName && s.Id != _nextId))
             {
                 var student = new Student
                 {
                     Id = _nextId++,
                     Name = NewStudentName,
-                    Courses = new ObservableCollection<Course>(SelectedCourses)
+                    Courses = new ObservableCollection<Course>(SelectedCourses ?? new ObservableCollection<Course>())
                 };
                 Students.Add(student);
                 NewStudentName = string.Empty;
-                SelectedCourses.Clear();
+                SelectedCourses?.Clear();
             }
         }
 
         [RelayCommand]
         private void RemoveStudent(Student student)
         {
-            Students.Remove(student);
+            if (student != null)
+            {
+                Students.Remove(student);
+            }
         }
 
         [RelayCommand]
@@ -72,7 +79,16 @@ namespace RKISApp.ViewModels
                 EditingStudent = student;
                 NewStudentName = student.Name ?? string.Empty;
                 SelectedCourses = new ObservableCollection<Course>(student.Courses ?? new ObservableCollection<Course>());
-                student.IsEditing = true;
+                if (student.Courses != null)
+                {
+                    foreach (var course in student.Courses)
+                    {
+                        if (course != null && !AvailableCourses.Any(c => c.Name == course.Name && c.Description == course.Description))
+                        {
+                            AvailableCourses.Add(course);
+                        }
+                    }
+                }
             }
         }
 
@@ -85,7 +101,7 @@ namespace RKISApp.ViewModels
                 EditingStudent.IsEditing = false;
                 EditingStudent = null;
                 NewStudentName = string.Empty;
-                SelectedCourses.Clear();
+                SelectedCourses?.Clear();
             }
         }
 
@@ -97,18 +113,25 @@ namespace RKISApp.ViewModels
                 EditingStudent.IsEditing = false;
                 EditingStudent = null;
                 NewStudentName = string.Empty;
-                SelectedCourses.Clear();
+                SelectedCourses?.Clear();
             }
         }
-
-        public ICommand CurrentAddSaveCommand => EditingStudent == null ? AddStudentCommand : SaveStudentCommand;
 
         private void SaveStudentChanges(Student student)
         {
             if (student != null)
             {
-                student.Name = NewStudentName;
-                student.Courses = new ObservableCollection<Course>(SelectedCourses);
+                int index = Students.IndexOf(student);
+                if (index >= 0)
+                {
+                    Students[index] = new Student
+                    {
+                        Id = student.Id,
+                        Name = NewStudentName ?? string.Empty,
+                        Courses = new ObservableCollection<Course>(SelectedCourses ?? student.Courses ?? new ObservableCollection<Course>()),
+                        IsEditing = false
+                    };
+                }
             }
         }
 

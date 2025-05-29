@@ -1,8 +1,9 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using System.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
-using RKISApp.ViewModels;
 using RKISApp.Models;
+using RKISApp.ViewModels;
 
 namespace RKISApp.ViewModels
 {
@@ -23,7 +24,21 @@ namespace RKISApp.ViewModels
             // Синхронизация изменений в курсах
             CoursesViewModel.Courses.CollectionChanged += (s, e) =>
             {
-                RKISViewModel.AvailableCourses = new ObservableCollection<Course>(CoursesViewModel.Courses);
+                var newAvailableCourses = new ObservableCollection<Course>(CoursesViewModel.Courses);
+                RKISViewModel.AvailableCourses = newAvailableCourses;
+
+                // Обновляем курсы студентов, сохраняя их оригинальные данные
+                foreach (var student in RKISViewModel.Students)
+                {
+                    var updatedCourses = new ObservableCollection<Course>();
+                    foreach (var course in student.Courses)
+                    {
+                        // Если курс всё ещё существует в AvailableCourses, используем его
+                        var matchingCourse = newAvailableCourses.FirstOrDefault(c => c.Name == course.Name && c.Description == course.Description);
+                        updatedCourses.Add(matchingCourse ?? course); // Сохраняем оригинальный курс, если он удалён
+                    }
+                    student.Courses = updatedCourses;
+                }
             };
         }
 

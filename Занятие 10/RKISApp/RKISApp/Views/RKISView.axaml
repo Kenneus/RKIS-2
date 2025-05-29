@@ -5,7 +5,7 @@
              x:DataType="vm:RKISViewModel"
              x:Name="RKISViewControl">
 	<StackPanel Margin="10">
-		<!-- Верхняя панель -->
+		<!-- Верхняя панель для добавления/редактирования студента -->
 		<StackPanel Orientation="Horizontal" Margin="0,0,0,10">
 			<TextBox Text="{Binding NewStudentName, Mode=TwoWay}" Width="200" Margin="0,0,10,0" Watermark="Имя студента"/>
 			<ListBox ItemsSource="{Binding AvailableCourses}" SelectedItems="{Binding SelectedCourses}" SelectionMode="Multiple" Width="200" Margin="0,0,10,0">
@@ -19,7 +19,7 @@
                     Command="{Binding CurrentAddSaveCommand}"/>
 			<Button Content="Отмена" Command="{Binding CancelEditCommand}" IsVisible="{Binding EditingStudent, Converter={StaticResource NullToBooleanConverter}}"/>
 		</StackPanel>
-		<!-- Список -->
+		<!-- Список студентов -->
 		<ItemsControl ItemsSource="{Binding Students}">
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
