@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RKISApp.ViewModels"
+        xmlns:views="using:RKISApp.Views"
+        x:Class="RKISApp.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="RKISApp">
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+		<!-- Меню -->
+		<StackPanel Orientation="Horizontal" Margin="10">
+			<Button Content="RKIS" Command="{Binding SwitchToStudentsCommand}" Margin="0,0,10,0"/>
+			<Button Content="Курсы" Command="{Binding SwitchToCoursesCommand}"/>
+		</StackPanel>
+		<!-- Контент -->
+		<ContentControl Grid.Row="1" Content="{Binding CurrentViewModel}"/>
+	</Grid>
+</Window>
